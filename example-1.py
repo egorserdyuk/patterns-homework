@@ -41,7 +41,7 @@ class Price:
     __metaclass__ = ABCMeta
 
     def __init__(self):
-        self._transport = "Unkonwn price for unknow transport"
+        self._transport = "Unkonwn price for unknown transport"
 
     def get_price(self):
         return self._transport
@@ -51,32 +51,31 @@ class Price:
         pass
 
 # Singleton implementation
-class DataViewerMeta(type):  
-    _instances = {}
-
-    def __call__(self, *args, **kwargs):
-        if cls not in cls._instances:
-            instance = super().__call__(*args, **kwargs)
-            cls._instances[cls] = instance
-        return cls._instances[cls]
-
-class DataViewerBicycle(metaclass=DataViewerMeta):
-    def fetch_data(self):
-        way_bicycle = Bicycle()
-
-class DataBicycle(object):
+class DataView(object):
     instance = None
+    params = []
     
     def __new__(cls):
         if cls.instance is None:
             cls.instance = object.__new__(cls)
         return cls.instance
 
+    def set(cls, key, value):
+        cls.params[key] = value
+        return cls.params
+
+    def get(cls, key):
+        return cls.params[key]
+
 if __name__ == "__main__":
     context = RouteContext(Fastest())
-    print("Client: Strategy is set to the fastest sorting")
+    print("Client: Strategy is set to the fastest sorting\n")
     context.logic()
 
-    print("\nClient: Strategy is set to the slowest sorting")
+    print("\nClient: Strategy is set to the slowest sorting\n")
     context.strategy = Slowest()
     context.logic()
+
+    # data_store = DataView()
+    # data_store.set('0', 'old')
+    # print(data_store.get(0))
