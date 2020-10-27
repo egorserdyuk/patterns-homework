@@ -1,63 +1,40 @@
 # This is one of the variations of the three design patterns in airport routing program
 from __future__ import annotations
-from abc import ABCMeta, abstractmethod
-from typing import List
+from abc import ABC, ABCMeta, abstractmethod
+from typing import Dict, List
 from random import randint
 
 # Strategy implementation
-class Route:  
-    __metaclass__ = ABCMeta
-    transport_type = None
+class RouteContext():
+    def __init__(self, strategy: RouteStrategy):
+        self._strategy = strategy
 
+    @property
+    def strategy(self):
+        return self._strategy
+
+    @strategy.setter
+    def strategy(self, strategy: RouteStrategy):
+        self._strategy = strategy
+
+    def logic(self):
+        print("Context: Sorting data using the strategy")
+        result = self._strategy.analyze({'Bicycle': randint(60, 120),'Car': randint(10, 40),'Taxi': randint(20, 60),'Bus': randint(60, 180)})
+        for i in result:
+	        print(f'{i[0]} on time is around {i[1]} minutes')
+
+class RouteStrategy(ABC):
     @abstractmethod
-    def display(self):
+    def analyze(self, data: Dict):
         pass
 
-    def time(self):
-        self.transport_type.time()
+class Fastest(RouteStrategy):
+    def analyze(self, data: Dict):
+        return sorted(data.items(), key=lambda x: x[1])
 
-    def set_transport(self, transport_type):
-        self.transport_type = transport_type
-
-class Bicycle(Route):
-    def __init__(self):
-        self.transport_type = BicycleTime()
-
-class Car(Route):
-    def __init__(self):
-        self.transport_type = CarTime()
-
-class Taxi(Route):
-    def __init__(self):
-        self.transport_type = TaxiTime()
-
-class Bus(Route):
-    def __init__(self):
-        self.transport_type = BusTime()
-
-
-class TransportType:
-    __metaclass__ = ABCMeta
-
-    @abstractmethod
-    def time(self):
-        pass
-
-class BicycleTime(TransportType):
-    def time(self):
-        print(f'Around {randint(60, 120)} minutes by Bicycle')
-
-class CarTime(TransportType):
-    def time(self):
-        print(f'Around {randint(10, 40)} minutes by Car')
-
-class TaxiTime(TransportType):
-    def time(self):
-        print(f'Around {randint(20, 60)} minutes by Taxi')
-
-class BusTime(TransportType):
-    def time(self):
-        print(f'Around {randint(60, 180)} minutes by Bus')
+class Slowest(RouteStrategy):
+    def analyze(self, data: Dict):
+        return sorted(data.items(), key=lambda x: x[1], reverse=True)
 
 # Decorator implementation
 class Price:
@@ -96,18 +73,10 @@ class DataBicycle(object):
         return cls.instance
 
 if __name__ == "__main__":
-    way_bicycle = Bicycle()
-    way_car = Car()
-    way_bus = Bus()
+    context = RouteContext(Fastest())
+    print("Client: Strategy is set to the fastest sorting")
+    context.logic()
 
-    way_bicycle.time()
-    way_car.time()
-    way_bus.time()
-
-    data_way_bycicle_1 = DataBicycle(way_bicycle)
-    data_way_bycicle_2 = DataBicycle(way_bicycle)
-
-    print(data_way_bycicle_1)
-    print(data_way_bycicle_2)
-
-    assert data_way_bycicle_1 == data_way_bycicle_2, "Something wents wrong"
+    print("\nClient: Strategy is set to the slowest sorting")
+    context.strategy = Slowest()
+    context.logic()
