@@ -51,21 +51,14 @@ class Price:
         pass
 
 # Singleton implementation
-class DataView(object):
-    instance = None
-    params = []
-    
-    def __new__(cls):
-        if cls.instance is None:
-            cls.instance = object.__new__(cls)
-        return cls.instance
+class DataView(type):
+    def __call__(cls, *args, **kwds):
+        print("Singleton spawns at", args)
+        return type.__call__(cls, *args, **kwds)
 
-    def set(cls, key, value):
-        cls.params[key] = value
-        return cls.params
-
-    def get(cls, key):
-        return cls.params[key]
+class DataSave(metaclass=DataView):
+    def __init__(self, data: Dict):
+        self.data = data
 
 if __name__ == "__main__":
     context = RouteContext(Fastest())
@@ -76,6 +69,4 @@ if __name__ == "__main__":
     context.strategy = Slowest()
     context.logic()
 
-    # data_store = DataView()
-    # data_store.set('0', 'old')
-    # print(data_store.get(0))
+    data_store = DataSave(context)
