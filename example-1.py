@@ -73,12 +73,17 @@ class EndPrice(Price):
 
     def operator(self, data: Dict):
         _data = {key: self.obj[key] * data[key] for key in self.obj}
-        self._data = _data
         return _data
 
-    def out(self):
-        for i in self._data.items():
+class OutPrice(Price):
+    def __init__(self, obj):
+        self.obj = obj
+
+    def operator(self):
+        for i in self.obj.items():
 	        print(f'{i[0]} will cost around {i[1]} rubles')
+
+            
 
 # Singleton implementation (through metaclasses)
 class DataView(type):
@@ -109,7 +114,6 @@ if __name__ == "__main__":
     context.strategy = Slowest()
     context.logic()
     context.print_result()
-
     print()
 
     data = context.out_data()
@@ -119,9 +123,8 @@ if __name__ == "__main__":
     decorator = decorator.operator(price)
     decorator = EndPrice(decorator)
     decorator = decorator.operator(data)
-    for i in decorator.items():
-	    print(f'{i[0]} will cost around {i[1]} rubles')
-
+    decorator = OutPrice(decorator)
+    decorator = decorator.operator()
 
     print("\nClient: Save actual price data in the singleton\n")
     data_store_1 = DataSave(decorator)
