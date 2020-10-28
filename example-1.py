@@ -2,7 +2,7 @@
 from __future__ import annotations
 from abc import ABC, ABCMeta, abstractmethod
 from typing import Dict, List
-from random import randint
+from random import randint, seed
 
 # Strategy implementation
 class RouteContext():
@@ -17,16 +17,32 @@ class RouteContext():
     def strategy(self, strategy: RouteStrategy):
         self._strategy = strategy
 
+    def set_data(self):
+        seed(1)
+        data = {'Bicycle': randint(60, 120),'Car': randint(10, 40),'Taxi': randint(20, 60),'Bus': randint(60, 180)}
+        self.data = data
+        return data
+
+    def out_data(self):
+        return self.data
+
     def logic(self):
-        print("Context: Sorting data using the strategy")
-        result = self._strategy.analyze({'Bicycle': randint(60, 120),'Car': randint(10, 40),'Taxi': randint(20, 60),'Bus': randint(60, 180)})
-        for i in result:
+        result = self._strategy.analyze(self.data)
+        self.result = result
+        return result
+
+    def print_result(self):
+        for i in self.result:
 	        print(f'{i[0]} on time is around {i[1]} minutes')
 
 class RouteStrategy(ABC):
     @abstractmethod
     def analyze(self, data: Dict):
         pass
+
+class Normal(RouteStrategy):
+    def analyze(self, data: Dict):
+        return data.items()
 
 class Fastest(RouteStrategy):
     def analyze(self, data: Dict):
@@ -37,36 +53,80 @@ class Slowest(RouteStrategy):
         return sorted(data.items(), key=lambda x: x[1], reverse=True)
 
 # Decorator implementation
-class Price:
+class Price(object):
     __metaclass__ = ABCMeta
 
-    def __init__(self):
-        self._transport = "Unkonwn price for unknown transport"
-
-    def get_price(self):
-        return self._transport
-
     @abstractmethod
-    def price(self):
+    def operator(self):
         pass
 
-# Singleton implementation
+
+class Component(Price):
+    """Компонент программы"""
+    def operator(self, data):
+        return data
+
+class EndPrice(Price):
+    """Декоратор"""
+    def __init__(self, obj):
+        self.obj = obj
+
+    def operator(self, data: Dict):
+        _data = {key: self.obj[key] * data[key] for key in self.obj}
+        self._data = _data
+        return _data
+
+    def out(self):
+        for i in self._data.items():
+	        print(f'{i[0]} will cost around {i[1]} rubles')
+
+# Singleton implementation (through metaclasses)
 class DataView(type):
-    def __call__(cls, *args, **kwds):
-        print("Singleton spawns at", args)
-        return type.__call__(cls, *args, **kwds)
+    _instances = {}
+
+    def __call__(cls, *args, **kwargs):
+        if cls not in cls._instances:
+            instance = super().__call__(*args, **kwargs)
+            cls._instances[cls] = instance
+        return cls._instances[cls]
+
 
 class DataSave(metaclass=DataView):
-    def __init__(self, data: Dict):
+    def __init__(self, data: List):
         self.data = data
+
+    def get_data(self):
+        return self.data
 
 if __name__ == "__main__":
     context = RouteContext(Fastest())
-    print("Client: Strategy is set to the fastest sorting\n")
+    print("\nClient: Strategy is set to the fastest sorting\n")
+    context.set_data()
     context.logic()
+    context.print_result()
 
     print("\nClient: Strategy is set to the slowest sorting\n")
     context.strategy = Slowest()
     context.logic()
+    context.print_result()
 
-    data_store = DataSave(context)
+    print()
+
+    data = context.out_data()
+
+    price = {'Bicycle': 0,'Car': 3,'Taxi': 5,'Bus': 1}
+    decorator = Component()
+    decorator = decorator.operator(price)
+    decorator = EndPrice(decorator)
+    decorator = decorator.operator(data)
+    for i in decorator.items():
+	    print(f'{i[0]} will cost around {i[1]} rubles')
+
+
+    print("\nClient: Save actual price data in the singleton\n")
+    data_store_1 = DataSave(decorator)
+    data_store_2 = DataSave(decorator)
+
+    if data_store_1 == data_store_2: print("That's ok")
+    else: print("Something went wrong")
+    
