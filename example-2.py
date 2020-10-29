@@ -6,214 +6,144 @@ from random import randrange, sample
 from typing import Any, List
 from datetime import datetime
 from string import ascii_letters, digits
+import hashlib
 
-class AlphabeticalOrderIterator(Iterator):
+class Message:
+    def __init__(self, name, text, recipient):
+        self.name = name
+        self.text = text
+        self.recipient = recipient       
+
+    def __repr__(self):
+        return f"Send by {self.name} to {self.recipient}\nText: {self.text}"
+
+    def update(self, status: MessageObserver):
+        if not status.get_state(): return f"Send by {self.name} to {self.recipient}\nText: {self.text}"
+        else: return f"Error"
+
+    def text_list(self):
+        return list(self.text.split(" "))
+
+    def save(self):
+        return Memento(self)
+
+    def restore(self, memento) -> None:
+        message = memento.get_message()
+        self.name = message.name
+        self.text = message.text
+        self.recipient = message.recipient
+
+# Iterator implementation
+class TextCryptor(Iterator):
     _position: int = None
 
-    _reverse: bool = False
-
-    def __init__(self, collection: WordsCollection, reverse: bool = False) -> None:
+    def __init__(self, collection: Words) -> None:
         self._collection = collection
-        self._reverse = reverse
-        self._position = -1 if reverse else 0
+        self._position = 0
+
+    def __str__(self):
+        return list(self.value)
 
     def __next__(self):
         try:
             value = self._collection[self._position]
-            self._position += -1 if self._reverse else 1
+            value = hashlib.sha1(value.encode('utf-8')).hexdigest()
+            self._position += 1
         except IndexError:
             raise StopIteration()
 
         return value
 
-class WordsCollection(Iterable):
-
+class Words(Iterable):
     def __init__(self, collection: List[Any] = []) -> None:
         self._collection = collection
 
-    def __iter__(self) -> AlphabeticalOrderIterator:
-        return AlphabeticalOrderIterator(self._collection)
-
-    def get_reverse_iterator(self) -> AlphabeticalOrderIterator:
-        return AlphabeticalOrderIterator(self._collection, True)
+    def __iter__(self) -> TextCryptor:
+        return TextCryptor(self._collection)
 
     def add_item(self, item: Any):
         self._collection.append(item)
 
-class Subject(ABC):
-    @abstractmethod
-    def attach(self, observer: Observer) -> None:
-        pass
+# Observer implementation
+class MessageObserver:
+    _state: bool = None
+    _observers = []
 
-    @abstractmethod
-    def detach(self, observer: Observer) -> None:
-        pass
-
-    @abstractmethod
-    def notify(self) -> None:
-        pass
-
-
-class ConcreteSubject(Subject):
-    _state: int = None
-
-    _observers: List[Observer] = []
-
-    def attach(self, observer: Observer) -> None:
+    def attach(self, observer) -> None:
         print("Subject: Attached an observer.")
         self._observers.append(observer)
 
-    def detach(self, observer: Observer) -> None:
+    def detach(self, observer) -> None:
         self._observers.remove(observer)
 
     def notify(self) -> None:
         print("Subject: Notifying observers...")
         for observer in self._observers:
+            print("Message sent")
             observer.update(self)
 
-    def some_business_logic(self) -> None:
-        print("\nSubject: I'm doing something important.")
-        self._state = randrange(0, 10)
+    def send(self, message_state: bool) -> None:
+        self._state = message_state
 
-        print(f"Subject: My state has just changed to: {self._state}")
+        print("Message on the way") if message_state else print("WTF, error")
         self.notify()
 
-
-class Observer(ABC):
-    @abstractmethod
-    def update(self, subject: Subject) -> None:
-        pass
-
-
-class ConcreteObserverA(Observer):
-    def update(self, subject: Subject) -> None:
-        if subject._state < 3:
-            print("ConcreteObserverA: Reacted to the event")
-
-
-class ConcreteObserverB(Observer):
-    def update(self, subject: Subject) -> None:
-        if subject._state == 0 or subject._state >= 2:
-            print("ConcreteObserverB: Reacted to the event")
-
-class Originator():
-    _state = None
-
-    def __init__(self, state: str) -> None:
-        self._state = state
-        print(f"Originator: My initial state is: {self._state}")
-
-    def do_something(self) -> None:
-        print("Originator: I'm doing something important.")
-        self._state = self._generate_random_string(30)
-        print(f"Originator: and my state has changed to: {self._state}")
-
-    def _generate_random_string(self, length: int = 10) -> None:
-        return "".join(sample(ascii_letters, length))
-
-    def save(self) -> Memento:
-        return ConcreteMemento(self._state)
-
-    def restore(self, memento: Memento) -> None:
-        self._state = memento.get_state()
-        print(f"Originator: My state has changed to: {self._state}")
-
-
-class Memento(ABC):
-    @abstractmethod
-    def get_name(self) -> str:
-        pass
-
-    @abstractmethod
-    def get_date(self) -> str:
-        pass
-
-
-class ConcreteMemento(Memento):
-    def __init__(self, state: str) -> None:
-        self._state = state
-        self._date = str(datetime.now())[:19]
-
-    def get_state(self) -> str:
+    def get_state(self):
         return self._state
 
-    def get_name(self) -> str:
-        return f"{self._date} / ({self._state[0:9]}...)"
+# Memento implementation
+class Memento:
+    def __init__(self, message):
+        self.message = Message(name = message.name, text = message.text, recipient = message.recipient)
 
-    def get_date(self) -> str:
-        return self._date
+    def get_message(self):
+        return self.message
 
-
-class Caretaker():
-    def __init__(self, originator: Originator) -> None:
-        self._mementos = []
-        self._originator = originator
+class Caretaker:
+    def __init__(self, message) -> None:
+        self.mementos = []
+        self.message = message
 
     def backup(self) -> None:
-        print("\nCaretaker: Saving Originator's state...")
-        self._mementos.append(self._originator.save())
+        self.mementos.append(self.message.save())
 
     def undo(self) -> None:
-        if not len(self._mementos):
+        if not len(self.mementos):
             return
 
-        memento = self._mementos.pop()
-        print(f"Caretaker: Restoring state to: {memento.get_name()}")
+        memento = self.mementos.pop()
         try:
-            self._originator.restore(memento)
+            self.message.restore(memento)
         except Exception:
             self.undo()
 
-    def show_history(self) -> None:
-        print("Caretaker: Here's the list of mementos:")
-        for memento in self._mementos:
-            print(memento.get_name())
-
 if __name__ == "__main__":
-    collection = WordsCollection()
-    collection.add_item("First")
-    collection.add_item("Second")
-    collection.add_item("Third")
+    notify = MessageObserver()
 
-    print("Straight traversal:")
-    print("\n".join(collection))
-    print("")
+    letter = Message("Egor", "How do you?", "Ilya")
+    print(letter)
 
-    print("Reverse traversal:")
-    print("\n".join(collection.get_reverse_iterator()), end="")
+    notify.attach(letter)
 
-    subject = ConcreteSubject()
-
-    observer_a = ConcreteObserverA()
-    subject.attach(observer_a)
-
-    observer_b = ConcreteObserverB()
-    subject.attach(observer_b)
-
-    subject.some_business_logic()
-    subject.some_business_logic()
-
-    subject.detach(observer_a)
-
-    subject.some_business_logic()
-
-    originator = Originator("Super-duper-super-puper-super.")
-    caretaker = Caretaker(originator)
-
+    caretaker = Caretaker(letter)
     caretaker.backup()
-    originator.do_something()
 
-    caretaker.backup()
-    originator.do_something()
+    notify.send(True)
 
-    caretaker.backup()
-    originator.do_something()
+    collection = Words()
+    collection.add_item(letter.name)
+    collection.add_item(letter.text)   
+    collection.add_item(letter.recipient) 
 
-    print()
-    caretaker.show_history()
+    name = "\n".join(collection)[0:40]
+    text = "\n".join(collection)[41:81]
+    recipient = "\n".join(collection)[82:122]
 
-    print("\nClient: Now, let's rollback!\n")
+    letter.name = name
+    letter.text = text
+    letter.recipient = recipient
+    print(letter)
+
     caretaker.undo()
+    print(letter)
 
-    print("\nClient: Once more!\n")
-    caretaker.undo()
