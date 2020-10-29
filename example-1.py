@@ -119,17 +119,17 @@ if __name__ == "__main__":
     data = context.out_data()
 
     price = {'Bicycle': 0,'Car': 3,'Taxi': 5,'Bus': 1}
+
+    print("\nClient: Save actual price data in the singleton\n")
+    data_store_1 = DataSave(price)
+    data_store_2 = DataSave(price)
+
+    if data_store_1 == data_store_2: print("That's ok")
+    else: print("Something went wrong")
+
     decorator = Component()
-    decorator = decorator.operator(price)
+    decorator = decorator.operator(data_store_1.get_data())
     decorator = EndPrice(decorator)
     decorator = decorator.operator(data)
     decorator = OutPrice(decorator)
     decorator = decorator.operator()
-
-    print("\nClient: Save actual price data in the singleton\n")
-    data_store_1 = DataSave(decorator)
-    data_store_2 = DataSave(decorator)
-
-    if data_store_1 == data_store_2: print("That's ok")
-    else: print("Something went wrong")
-    
