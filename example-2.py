@@ -9,6 +9,9 @@ from string import ascii_letters, digits
 import hashlib
 
 class Message:
+    """
+    Самописный класс, реализующий простую структуру сообщения
+    """
     def __init__(self, name, text, recipient):
         self.name = name
         self.text = text
@@ -23,7 +26,9 @@ class Message:
 
     def text_list(self):
         return list(self.text.split(" "))
-
+    """
+    Механизмы сохранения данных сообщения и восстановления
+    """
     def save(self):
         return Memento(self)
 
@@ -34,7 +39,15 @@ class Message:
         self.recipient = message.recipient
 
 # Iterator implementation
+"""
+Используем абстрактный класс Iterator из модуля collections
+Реализуем метод __iter__() в итерируемом объекте и метод __next__() в итераторе
+"""
 class TextCryptor(Iterator):
+    """
+    Конкретные итераторы реализуют разные алгоритмы обхода, поэтому они хранят постоянно текущее положение обхода
+    Здесь атрибут _position хранит положение обхода
+    """
     _position: int = None
 
     def __init__(self, collection: Words) -> None:
@@ -45,6 +58,12 @@ class TextCryptor(Iterator):
         return list(self.value)
 
     def __next__(self):
+        """
+        Метод __next __() должен вернуть следующий элемент в последовательности
+        В процессе происходит шифрование поступившей фразы в формате sha1
+        При достижении конца коллекции и в последующих вызовах должно вызываться
+        исключение StopIteration
+        """
         try:
             value = self._collection[self._position]
             value = hashlib.sha1(value.encode('utf-8')).hexdigest()
@@ -55,10 +74,17 @@ class TextCryptor(Iterator):
         return value
 
 class Words(Iterable):
+    """
+    Конкретные Коллекции предоставляют один или несколько методов для получения
+    новых экземпляров итератора, совместимых с классом коллекции
+    """
     def __init__(self, collection: List[Any] = []) -> None:
         self._collection = collection
 
     def __iter__(self) -> TextCryptor:
+        """
+        Метод __iter__() возвращает объект итератора
+        """
         return TextCryptor(self._collection)
 
     def add_item(self, item: Any):
@@ -66,8 +92,18 @@ class Words(Iterable):
 
 # Observer implementation
 class MessageObserver:
+    """
+    Здесь происходит хранение некоторого важного состояния и оповещает наблюдателей о его
+    изменениях
+    """
     _state: bool = None
+    """
+    Для удобства в этой переменной хранится состояние
+    """
     _observers = []
+    """
+    Список наблюдателей
+    """
 
     def attach(self, observer) -> None:
         print("Subject: Attached an observer.")
@@ -76,13 +112,22 @@ class MessageObserver:
     def detach(self, observer) -> None:
         self._observers.remove(observer)
 
+    """
+    Методы управления подпиской
+    """
     def notify(self) -> None:
+        """
+        Запуск обновления в каждом наблюдателе
+        """
         print("Subject: Notifying observers...")
         for observer in self._observers:
             print("Message sent")
             observer.update(self)
 
     def send(self, message_state: bool) -> None:
+        """
+        Отслеживание отправки сообщения
+        """
         self._state = message_state
 
         print("Message on the way") if message_state else print("WTF, error")
@@ -93,13 +138,23 @@ class MessageObserver:
 
 # Memento implementation
 class Memento:
+    """
+    Интерфейс Снимка предоставляет способ извлечения метаданных снимка
+    """
     def __init__(self, message):
         self.message = Message(name = message.name, text = message.text, recipient = message.recipient)
 
     def get_message(self):
+        """
+        Создатель использует этот метод, когда восстанавливает своё состояние
+        """
         return self.message
 
 class Caretaker:
+    """
+    Опекун не зависит от класса Конкретного Снимка
+    Он работает со всеми снимками через базовый интерфейс Снимка
+    """
     def __init__(self, message) -> None:
         self.mementos = []
         self.message = message
